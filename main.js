@@ -1,4 +1,4 @@
-var websocket = new WebSocket("ws://localhost:8001/");
+var websocket = new WebSocket("wss://192.168.0.195:8001/");
 const canvas = document.createElement('canvas');
 const ctx = canvas.getContext('2d');
 
@@ -32,14 +32,14 @@ window.addEventListener("DOMContentLoaded", () => {
 			const img = new Image();
     		
 			img.onload = () => {
-    		    canvas.width = img.width;
-    		    canvas.height = img.height;
+    		    canvas_other.width = img.width;
+    		    canvas_other.height = img.height;
 			
-    		    ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+    		    ctx_other.drawImage(img, 0, 0, canvas_other.width, canvas_other.height);
 			
     		    // 將 canvas 每幀轉為視頻數據模擬幀
-    		    const stream = canvas.captureStream(30); // 每秒捕獲 30 幀
-    		    other_video.srcObject = stream;
+    		    const stream_other = canvas_other.captureStream(30); // 每秒捕獲 30 幀
+    		    other_video.srcObject = stream_other;
     		};
 			img.src = "data:image/jpeg;base64," + response["data"];
 		}

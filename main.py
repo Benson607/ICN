@@ -1,13 +1,10 @@
 #!/usr/bin/env python
 
+import ssl
 import json
 import asyncio
 from websockets.asyncio.server import serve
 from websockets.exceptions import ConnectionClosed
-
-import base64
-from PIL import Image
-from io import BytesIO
 
 client_list = {}
 
@@ -20,11 +17,12 @@ async def handler(websocket):
             }
             print(msg_deconde["text"])
             await websocket.send(json.dumps(event))
+        
         elif msg_deconde["type"] == "video":
             
             client_id = id(websocket)
             if (client_id not in client_list):
-                print("add")
+                print(client_list)
             client_list[client_id] = websocket
 
             for other_id, other_client in list(client_list.items()):
@@ -33,10 +31,14 @@ async def handler(websocket):
                         msg_deconde["id"] = client_id
                         await other_client.send(json.dumps(msg_deconde))
                     except ConnectionClosed:
+                        print("del")
                         del client_list[client_id]
 
 async def main():
-    async with serve(handler, "", 8001):
+    ssl_context = ssl.SSLContext(ssl.PROTOCOL_TLS_SERVER)
+    ssl_context.load_cert_chain(certfile="server.crt", keyfile="server.key")
+    
+    async with serve(handler, "192.168.0.195", 8001, ssl=ssl_context):
         await asyncio.get_running_loop().create_future()
 
 

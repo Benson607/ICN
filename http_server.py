@@ -1,3 +1,4 @@
+import ssl
 from http.server import HTTPServer, SimpleHTTPRequestHandler
 
 class CustomHandler(SimpleHTTPRequestHandler):
@@ -20,5 +21,12 @@ class CustomHandler(SimpleHTTPRequestHandler):
 if __name__ == "__main__":
     server_address = ('', 8000)  # 监听所有接口，端口8000
     httpd = HTTPServer(server_address, CustomHandler)
+
+    httpd.socket = ssl.wrap_socket(httpd.socket,
+                                   keyfile="server.key",
+                                   certfile="server.crt",
+                                   server_side=True
+                                   )
+
     print("Serving on port 8000...")
     httpd.serve_forever()
