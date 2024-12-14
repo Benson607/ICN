@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>聊天室</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.7.1/socket.io.min.js"></script>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; }
+        #chat { width: 100%; height: 300px; overflow-y: scroll; border: 1px solid #ccc; padding: 10px; margin-bottom: 10px; }
+        #message { width: 80%; padding: 10px; }
+        #send { padding: 10px; }
+    </style>
+</head>
+<body>
+    <h1>聊天室</h1>
+    <div>
+        <label>用戶名：</label>
+        <input type="text" id="username" required>
+        <label>聊天室：</label>
+        <input type="text" id="room" required>
+        <button onclick="joinRoom()">加入</button>
+        <button onclick="leaveRoom()">離開</button>
+    </div>
+    <div id="chat"></div>
+    <input type="text" id="message" placeholder="輸入訊息...">
+    <button id="send" onclick="sendMessage()">送出</button>
+
+    <script>
+        const socket = io();
+
+        const chat = document.getElementById('chat');
+        const messageInput = document.getElementById('message');
+        const usernameInput = document.getElementById('username');
+        const roomInput = document.getElementById('room');
+
+        function joinRoom() {
+            const username = usernameInput.value;
+            const room = roomInput.value;
+
+            if (username && room) {
+                socket.emit('join', { username, room });
+            }
+        }
+
+        function leaveRoom() {
+            const username = usernameInput.value;
+            const room = roomInput.value;
+
+            if (username && room) {
+                socket.emit('leave', { username, room });
+            }
+        }
+
+        function sendMessage() {
+            const username = usernameInput.value;
+            const room = roomInput.value;
+            const message = messageInput.value;
+
+            if (username && room && message) {
+                socket.emit('send_message', { username, room, message });
+                messageInput.value = ''; // 清空輸入框
+            }
+        }
+
+        // 接收訊息
+        socket.on('message', (data) => {
+            const msgElement = document.createElement('p');
+            msgElement.textContent = data.msg;
+            chat.appendChild(msgElement);
+            chat.scrollTop = chat.scrollHeight; // 自動滾動到底部
+        });
+    </script>
+</body>
+</html>
