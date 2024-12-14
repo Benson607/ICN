@@ -18,6 +18,7 @@
       		  	position: absolute;
       		  	right: 5px;
       		  	bottom: 5px;
+				right: 50%;
       		}
     	</style>
   	</head>
@@ -26,5 +27,22 @@
     	<script src="main.js" type="module"></script>
     	<textarea id="input_text" rows="1" class="to_botton"></textarea>
     	<button id="submit_button" type="button" class="submit_button">上傳</button>
+		<video id="camera" autoplay playsinline></video>
+		<div id="video_area"></div>
+		<script src="main.js"></script>
+		<script>
+			const video = document.getElementById('camera');
+	
+			navigator.mediaDevices.getUserMedia({ video: true })
+				.then((stream) => {
+					video.srcObject = stream;
+					video.play();
+					
+					send_video(video);
+				})
+				.catch((error) => {
+					console.error('can not open camera', error);
+				});
+		</script>
   	</body>
 </html>
