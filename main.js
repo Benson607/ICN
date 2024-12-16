@@ -1,82 +1,117 @@
-const localVideo = document.getElementById('localVideo');
-const remoteVideo = document.getElementById('remoteVideo')
+const localVideo = document.getElementById('localVideo');   // get screen that show you
+const remoteVideo = document.getElementById('remoteVideo'); // get screen that show other people
+
 const peerConnectionConfig = {
     iceServers: [{urls: 'stun:stun.l.google.com:19302'}]
-}
+};
+
 let localStream;
 let peerConnection;
+
+let remote_list = {};
+
 const socket = new WebSocket('wss://192.168.0.195:8001');
 
-async function start() {
-    // 獲取本地媒體流（視訊與音訊）
-    localStream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
-    localVideo.srcObject = localStream
-    // 創建 RTCPeerConnection 物件
-    peerConnection = new RTCPeerConnection(peerConnectionConfig)
-    // 在創建後設置 ICE candidate 事件處理器
-    peerConnection.onicecandidate = (event) => {
-        if (event.candidate) {
-            // 當有新的 ICE candidate 時，發送到伺服器
-            socket.send(JSON.stringify({ iceCandidate: event.candidate }));
-        }
+class My_peer_connection extends RTCPeerConnection {
+    constructor(conf, id) {
+        super(conf);
+        this.id = id;
+        this.video_item = document.createElement("video");
+        this.video_item.id = id;
+        this.video_item.autoplay = true;
+        document.getElementById("video_area").appendChild(this.video_item);
     }
-    // 將本地媒體流的所有 track 加入 peerConnection
-    localStream.getTracks().forEach(track => peerConnection.addTrack(track, localStream))
-    // 當接收到遠端流時顯示
-    peerConnection.ontrack = (event) => {
-        remoteVideo.srcObject = event.streams[0];
-    };
+    
+    set_callback() {
+        this.onicecandidate = (event) => {
+            if (event.candidate) {
+                // when have new ice, send to server
+                socket.send(JSON.stringify({ iceCandidate: event.candidate, id: this.id }));
+            }
+        };
+
+        localStream.getTracks().forEach(track => this.addTrack(track, localStream));
+        
+        this.ontrack = (event) => {
+            document.getElementById(this.id).srcObject = event.streams[0];
+        };
+    }
 }
 
-// WebSocket 連線與信令處理
-socket.onopen = () => {
-    console.log('WebSocket connection established');
+async function start() {
+    // get local image from camera by stream format
+    localStream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
+    
+    // set your camera image to screen
+    localVideo.srcObject = localStream;
 }
+
+socket.onopen = () => {
+    //console.log('WebSocket open');
+};
 
 socket.onmessage = (event) => {
-    const message = JSON.parse(event.data)
-    if (message.offer) {
-        handleOffer(message.offer);
-    } else if (message.answer) {
-        handleAnswer(message.answer);
-    } else if (message.iceCandidate) {
-        handleNewICECandidate(message.iceCandidate);
+    const message = JSON.parse(event.data);
+
+    if (message.create) {
+        createOffer(message);
+    }
+    else if (message.offer) {
+        handleOffer(message);
+    }
+    else if (message.answer) {
+        handleAnswer(message);
+    }
+    else if (message.iceCandidate) {
+        handleNewICECandidate(message);
+    }
+    else if (message.type == "del") {
+        document.getElementById(message.id).remove();
+        delete remote_list[message.id];
     }
 }
 
-// 處理來自其他用戶的 offer 訊息
-function handleOffer(offer) {
-    peerConnection.setRemoteDescription(new RTCSessionDescription(offer));
-    peerConnection.createAnswer().then(answer => {
-        peerConnection.setLocalDescription(answer);
-        socket.send(JSON.stringify({ answer: answer })); // 發送 answer 回去
+// send image to other
+function handleOffer(message) {
+    //console.log("get offer");
+    remote_list[message.id] = new My_peer_connection(peerConnectionConfig, message.id);
+    remote_list[message.id].set_callback();
+    remote_list[message.id].setRemoteDescription(new RTCSessionDescription(message.offer));
+    remote_list[message.id].createAnswer().then(answer => {
+        remote_list[message.id].setLocalDescription(answer);
+        socket.send(JSON.stringify({answer: answer, id: message.id}));
     });
 }
 
-// 處理來自其他用戶的 answer 訊息
-function handleAnswer(answer) {
-    peerConnection.setRemoteDescription(new RTCSessionDescription(answer));
+// set the image from other to screen
+function handleAnswer(message) {
+    remote_list[message.id].setRemoteDescription(new RTCSessionDescription(message.answer));
 }
 
-// 處理 ICE candidate
-function handleNewICECandidate(candidate) {
-    const iceCandidate = new RTCIceCandidate(candidate);
-    peerConnection.addIceCandidate(iceCandidate);
+// 
+function handleNewICECandidate(message) {
+    //console.log("get ice");
+    const iceCandidate = new RTCIceCandidate(message.iceCandidate);
+    remote_list[message.id].addIceCandidate(iceCandidate);
+    //peerConnection.addIceCandidate(iceCandidate);
 }
 
-// 發送 offer 訊息給伺服器
-async function createOffer() {
-    const offer = await peerConnection.createOffer();
-    await peerConnection.setLocalDescription(offer);
-    socket.send(JSON.stringify({ offer: offer }));  // 發送 offer 訊息
+// send "offer" messege to server
+// tell server you want in
+async function createOffer(message) {
+    for (let i = 0; i < message.ids.length; i++) {
+        remote_list[message.ids[i]] = new My_peer_connection(peerConnectionConfig, message.ids[i]);
+        remote_list[message.ids[i]].set_callback();
+        let offer = await remote_list[message.ids[i]].createOffer();
+        remote_list[message.ids[i]].setLocalDescription(offer);
+        socket.send(JSON.stringify({offer: offer, id: message.ids[i]}));
+    }
 }
 
-window.onunload = () => {
-	socket.send(JSON.stringify({type: "del"}));
-}
+window.addEventListener("beforeunload", () => {
+    socket.send(JSON.stringify({ type: "del" }));
+});
 
-// 這是開始連線的地方，呼叫此方法開始建立 WebRTC 連線
 start().then(() => {
-    // 一旦本地媒體流準備好，就可以創建 offer
-    createOffer();
+    socket.send(JSON.stringify({type: "join"}));
 });

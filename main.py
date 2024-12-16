@@ -4,29 +4,49 @@ import ssl
 import json
 
 # 儲存所有用戶的 WebSocket 連接
-connected_clients = set()
+connected_clients = {}
+
+times = 0
 
 async def signaling_handler(websocket, path):
-    connected_clients.add(websocket)
+    global times
+
+    user_id = id(websocket)
+    connected_clients[user_id] = websocket
+    
     try:
         async for message in websocket:
             data = json.loads(message)
+            times += 1
 
-            # 處理信令訊息：轉發 offer、answer 和 ICE candidates
             if 'offer' in data:
-                for client in connected_clients:
-                    if client != websocket:
-                        await client.send(json.dumps({'offer': data['offer']}))
+                #print(times, "get offer")
+                if data["id"] in connected_clients:
+                    await connected_clients[data["id"]].send(json.dumps({'offer': data['offer'], "id": user_id}))
+            
             elif 'answer' in data:
-                for client in connected_clients:
-                    if client != websocket:
-                        await client.send(json.dumps({'answer': data['answer']}))
+                #print(times, "get answer")
+                if data["id"] in connected_clients:
+                    await connected_clients[data["id"]].send(json.dumps({'answer': data['answer'], "id": user_id}))
+            
             elif 'iceCandidate' in data:
-                for client in connected_clients:
-                    if client != websocket:
-                        await client.send(json.dumps({'iceCandidate': data['iceCandidate']}))
+                #print(times, "get ice")
+                if data["id"] in connected_clients:
+                    await connected_clients[data["id"]].send(json.dumps({'iceCandidate': data['iceCandidate'], "id": user_id}))
+            
+            elif data["type"] == "join":
+                if len(list(connected_clients.keys())) > 1:
+                    tmp = list(connected_clients.keys())
+                    pos_now = tmp.index(user_id)
+                    del tmp[pos_now]
+                    await connected_clients[user_id].send(json.dumps({"create": 1, "ids": tmp}))
+
             elif data["type"] == "del":
-                connected_clients.remove(websocket)
+                for client in connected_clients:
+                    if client != user_id:
+                        await connected_clients[client].send(json.dumps({'type': "del", "id": user_id}))
+
+                del connected_clients[user_id]
 
     except websockets.exceptions.ConnectionClosed as e:
         print(e)
