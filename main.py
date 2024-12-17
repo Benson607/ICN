@@ -12,7 +12,6 @@ async def signaling_handler(websocket, path):
     global times
 
     user_id = id(websocket)
-    connected_clients[user_id] = websocket
     
     try:
         async for message in websocket:
@@ -35,6 +34,7 @@ async def signaling_handler(websocket, path):
                     await connected_clients[data["id"]].send(json.dumps({'iceCandidate': data['iceCandidate'], "id": user_id}))
             
             elif data["type"] == "join":
+                connected_clients[user_id] = websocket
                 if len(list(connected_clients.keys())) > 1:
                     tmp = list(connected_clients.keys())
                     pos_now = tmp.index(user_id)

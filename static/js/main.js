@@ -1,12 +1,10 @@
 var localVideo;   // get screen that show you
-//const remoteVideo = document.getElementById('remoteVideo'); // get screen that show other people
 
 const peerConnectionConfig = {
     iceServers: [{urls: 'stun:stun.l.google.com:19302'}]
 };
 
 let localStream;
-let peerConnection;
 
 let remote_list = {};
 
@@ -66,8 +64,10 @@ websocket.onmessage = (event) => {
         handleNewICECandidate(message);
     }
     else if (message.type == "del") {
-        document.getElementById(message.id).remove();
-        delete remote_list[message.id];
+        if (document.getElementById(message.id)) {
+            document.getElementById(message.id).remove();
+            delete remote_list[message.id];
+        }
     }
 }
 
@@ -139,6 +139,14 @@ window.addEventListener("DOMContentLoaded", function () {
             if (audio_track.enabled) {
                 audio_track.enabled = !audio_track.enabled;
             }
+        });
+        document.getElementById("leave-call-btn").addEventListener("click", function () {
+            websocket.send(JSON.stringify({ type: "del" }));
+            Object.keys(remote_list).forEach(key => {
+                document.getElementById(key).remove();
+            });
+            localStream = null;
+            remote_list = {};
         });
 
         start().then(() => {
