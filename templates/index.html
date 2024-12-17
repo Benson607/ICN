@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>會議室網站</title>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.7.1/socket.io.min.js"></script>
+  <script src="js/main.js"></script>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <!-- 初始畫面 -->
+  <div id="username-screen" class="screen active">
+    <div class="username-container">
+      <h2>歡迎進入會議室</h2>
+      <label for="username">請輸入您的名稱：</label>
+      <input type="text" id="username" placeholder="輸入名稱">
+      <label for="room-id">請輸入房間號：</label> <!-- 新增房間號標籤 -->
+      <input type="text" id="room-id" placeholder="輸入房間號"> <!-- 新增房間號輸入框 -->
+      <button id="enter-room-btn">進入會議室</button>
+    </div>
+  </div>
+
+  <!-- 會議室畫面 -->
+  <div id="meeting-screen" class="screen">
+    <div class="container">
+      <!-- 左側視訊區 -->
+      <div class="video-section">
+        <div id="video_area" class="video-stream">
+          <video id="localVideo" autoplay muted></video>
+          <!-- <p>這裡是視訊影像</p> -->
+        </div>
+        <!-- 新增控制按鈕區塊 -->
+        <div class="control-buttons">
+          <button class="circle-btn" id="open-video-btn">
+            <img src="img/open-video-icon.png" alt="開啟視訊">
+          </button>
+          <button class="circle-btn" id="close-video-btn">
+            <img src="img/close-video-icon.png" alt="關閉視訊">
+          </button>
+          <button class="circle-btn" id="open-audio-btn">
+            <img src="img/open-audio-icon.png" alt="開啟語音">
+          </button>
+          <button class="circle-btn" id="close-audio-btn">
+            <img src="img/close-audio-icon.png" alt="關閉語音">
+          </button>
+          <button class="circle-btn" id="leave-call-btn">
+            <img src="img/leave-call-icon.png" alt="離開通話">
+          </button>
+        </div>
+      </div>
+
+      <!-- 右側聊天區 -->
+      <div class="chat-section">
+        <div class="chat-header">
+          <h2>聊天訊息</h2>
+        </div>
+        <div class="chat-messages" id="chat">
+          <p><strong>系統:</strong> 歡迎加入會議！</p>
+        </div>
+        <div class="chat-input">
+          <input type="text" id="chat-input" placeholder="輸入訊息...">
+          <button id="send" onclick="sendMessage()">送出</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script src="script.js"></script>
+</body>
+</html>
