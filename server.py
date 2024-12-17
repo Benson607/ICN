@@ -37,4 +37,4 @@ def handle_message(data):
 if __name__ == '__main__':
     ssl_context = ('server.crt', 'server.key')
     # ip位置寫自己電腦的ip
-    socketio.run(app, host='192.168.0.173', port=5000, ssl_context=ssl_context,debug=True)
+    socketio.run(app, host='192.168.0.147', port=5000, ssl_context=ssl_context,debug=True)

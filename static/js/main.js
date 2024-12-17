@@ -8,7 +8,7 @@ let localStream;
 
 let remote_list = {};
 
-const websocket = new WebSocket('wss://192.168.0.173:8001');
+const websocket = new WebSocket('wss://192.168.0.147:8001');
 
 class My_peer_connection extends RTCPeerConnection {
     constructor(conf, id) {

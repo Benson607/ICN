@@ -46,7 +46,8 @@ async def signaling_handler(websocket, path):
                     if client != user_id:
                         await connected_clients[client].send(json.dumps({'type': "del", "id": user_id}))
 
-                del connected_clients[user_id]
+                if user_id in connected_clients:
+                    del connected_clients[user_id]
 
     except websockets.exceptions.ConnectionClosed as e:
         print(e)
@@ -57,7 +58,7 @@ ssl_context.load_cert_chain(certfile="server.crt", keyfile="server.key")
 
 # 啟動 WebSocket 伺服器，使用 wss
 # ip位置寫自己電腦的ip
-start_server = websockets.serve(signaling_handler, "192.168.0.173", 8001, ssl=ssl_context)
+start_server = websockets.serve(signaling_handler, "192.168.0.147", 8001, ssl=ssl_context)
 
 # 啟動事件循環來運行伺服器
 asyncio.get_event_loop().run_until_complete(start_server)

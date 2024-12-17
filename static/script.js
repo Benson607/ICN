@@ -1,7 +1,7 @@
 let currentUsername = ""; // 用於儲存使用者名稱
 let currentRoomId = ""; // 用於儲存房間號
 
-const socket = io('https://192.168.0.173:5000'); //這裡改為自己電腦的ip
+const socket = io('https://192.168.0.147:5000'); //這裡改為自己電腦的ip
 
 const chat = document.getElementById('chat');
 const messageInput = document.getElementById('chat-input');
