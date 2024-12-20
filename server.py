@@ -1,40 +1,41 @@
-from flask import Flask, render_template
-from flask_socketio import SocketIO, send, emit, join_room, leave_room
+import socket
+import struct
+import cv2
+import numpy as np
 
-app = Flask(__name__, static_url_path='', static_folder='static', template_folder='templates')
-app.config['SECRET_KEY'] = 'your_secret_key'  # 替換為你的密鑰
-socketio = SocketIO(app)
+# 配置接收端地址和端口
+host = "127.0.0.1"
+port = 5000
+sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+sock.bind((host, port))
 
-# 路由處理
-@app.route('/')
-def index():
-    return render_template('index.html')
+client_list = []
 
-# 監聽用戶加入聊天室
-@socketio.on('join')
-def handle_join(data):
-    username = data['username']
-    room = data['room']
-    join_room(room)
-    emit('message', {'msg': f"{username} 加入了聊天室！"}, to=room)
+max_packet_size = 1200
 
-# 監聽用戶離開聊天室
-@socketio.on('leave')
-def handle_leave(data):
-    username = data['username']
-    room = data['room']
-    leave_room(room)
-    emit('message', {'msg': f"{username} 離開了聊天室！"}, to=room)
+try:
+    while True:
+        # 接收数据
+        packet, addr = sock.recvfrom(65535)
 
-# 廣播訊息到聊天室
-@socketio.on('send_message')
-def handle_message(data):
-    room = data['room']
-    message = f"{data['username']}: {data['message']}"
-    emit('message', {'msg': message}, to=room)
+        if addr not in client_list:
+            client_list.append(addr)
+            
+        # 解析帧头
+        header = packet[:7]
+        frame_id, fragment_id, is_last = struct.unpack("IHB", header)
+        fragment_data = packet[7:]
+        frame_size = len(fragment_data)
 
-# 啟動伺服器
-if __name__ == '__main__':
-    ssl_context = ('server.crt', 'server.key')
-    # ip位置寫自己電腦的ip
-    socketio.run(app, host='192.168.0.147', port=5000, ssl_context=ssl_context,debug=True)
+        for i in client_list:
+            print("send")
+            for j in range(0, frame_size, max_packet_size):
+                fragment = fragment_data[j:j + max_packet_size]
+                header = struct.pack("IHBQ", frame_id, fragment_id, is_last, client_list.index(addr))
+                sock.sendto(header + fragment, i)
+
+except Exception as e:
+    print(e)    
+finally:
+    sock.close()
+    cv2.destroyAllWindows()
