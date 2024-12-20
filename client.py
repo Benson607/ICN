@@ -1,4 +1,5 @@
 import cv2
+import json
 import socket
 import struct
 import numpy as np
@@ -6,8 +7,8 @@ import tkinter as tk
 from PIL import Image, ImageTk
 from threading import Thread
 
-
 other_list = {}
+max_packet_size = 1200
 
 class my_canvas(tk.Canvas):
     def __init__(self):
@@ -72,17 +73,16 @@ def update_canvas():
         local_video.create_image(0, 0, anchor=tk.NW, image=imgtk)
         local_video.image = imgtk  # 防止被垃圾回收
 
-        max_packet_size = 1200  # UDP单个数据包最大值
         frame_data = buffer.tobytes()
         frame_size = len(frame_data)
 
         for i in range(0, frame_size, max_packet_size):
             fragment = frame_data[i:i + max_packet_size]
             # 帧头：帧ID（4字节） + 分片序号（2字节） + 是否是最后一个片段（1字节）
-            header = struct.pack("IHB", 1, i // max_packet_size, i + max_packet_size >= frame_size)
+            header = struct.pack("IHBB", 1, i // max_packet_size, i + max_packet_size >= frame_size, 0)
             sock.sendto(header + fragment, (host, port))
 
-host = "140.118.186.103"
+host = "140.118.186.246"
 port = 5000
 
 local_host = "140.118.186.44"
@@ -118,8 +118,8 @@ text_label = tk.Label()
 text_label.config(bg="skyblue")
 text_label.place(x=800, y=0, width=400, height=700)
 
-thread_1 = Thread(target=update_canvas)
-thread_2 = Thread(target=recive)
+thread_1 = Thread(target=update_canvas, daemon=True)
+thread_2 = Thread(target=recive, daemon=True)
 thread_1.start()
 thread_2.start()
 
@@ -130,5 +130,15 @@ def on_closing():
     win.destroy()
 
 win.protocol("WM_DELETE_WINDOW", on_closing)
+
+join_signal = json.dumps({"type": "join"}).encode("UTF-8")
+frame_id = 1
+frame_size = len(join_signal)
+
+for i in range(0, frame_size, max_packet_size):
+    fragment = join_signal[i:i + max_packet_size]
+    # 帧头：帧ID（4字节） + 分片序号（2字節） + 是否是最後一個片段（1字節）
+    header = struct.pack("IHBB", frame_id, i // max_packet_size, i + max_packet_size >= frame_size, 2)
+    sock.sendto(header + fragment, (host, port))
 
 win.mainloop()
