@@ -1,5 +1,4 @@
 import cv2
-import time
 import socket
 import struct
 import numpy as np
@@ -47,8 +46,6 @@ def recive():
             other_list[other_id].place(x=220*((len(other_list.keys()))%3), y=150*((len(other_list.keys())+1)//3), width=220, height=150)
 
         other_list[other_id].get(frame_id, fragment_id, is_last, fragment_data)
-        print(other_list[other_id].winfo_x(), other_list[other_id].winfo_y())
-        #win.after(100, recive)
 
 def update_canvas():
     # take camera
@@ -85,16 +82,14 @@ def update_canvas():
             header = struct.pack("IHB", 1, i // max_packet_size, i + max_packet_size >= frame_size)
             sock.sendto(header + fragment, (host, port))
 
-        # do this func every 100 ms
-        #win.after(100, update_canvas)
-
-host = "127.0.0.1"
+host = "140.118.186.103"
 port = 5000
 
+local_host = "140.118.186.44"
 local_port = 5001
 
 sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-sock.bind(("127.0.0.1", local_port))
+sock.bind((local_host, local_port))
 
 cap = cv2.VideoCapture(0)
 
