@@ -3,12 +3,13 @@ import socket
 import struct
 
 # 配置接收端地址和端口
-host = "127.0.0.1"
+host = "192.168.0.147"
 port = 5000
 sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
 sock.bind((host, port))
 
-client_list = []
+client_size = 0
+client_list = {}
 frame_buffer = {}
 max_packet_size = 1200
 current_frame_id = 0
@@ -25,10 +26,14 @@ try:
 
         if data_type == 0:
             for i in client_list:
-                for j in range(0, frame_size, max_packet_size):
-                    fragment = fragment_data[j:j + max_packet_size]
-                    header = struct.pack("IHBQ", frame_id, fragment_id, is_last, client_list.index(addr))
-                    sock.sendto(header + fragment, i)
+                if client_list[i] == addr:
+                    src_id = i
+            for i in client_list:
+                if client_list[i] != addr:
+                    for j in range(0, frame_size, max_packet_size):
+                        fragment = fragment_data[j:j + max_packet_size]
+                        header = struct.pack("IHBQB", frame_id, fragment_id, is_last, src_id, 0)
+                        sock.sendto(header + fragment, client_list[i])
         elif data_type == 1:
             pass
         elif data_type == 2:
@@ -44,10 +49,31 @@ try:
                 json_obj = json.loads(full_data.decode('utf-8'))
 
                 if json_obj["type"] == "join":
-                    client_list.append(addr)
+                    client_list[client_size] = addr
+                    client_size += 1
                     print(f"{addr} join")
+                elif json_obj["type"] == "del" or json_obj["type"] == "msg":
+
+                    for i in client_list:
+                        if client_list[i] == addr:
+                            src_id = i
+                    
+                    resend_signal = json.dumps(json_obj).encode("UTF-8")
+                    resend_size = len(resend_signal)
+
+                    for i in client_list:
+                        if i != src_id:
+                            for j in range(0, resend_size, max_packet_size):
+                                fragment = resend_signal[j:j + max_packet_size]
+                                header = struct.pack("IHBQB", 1, j // max_packet_size, j + max_packet_size >= resend_size, src_id, 2)
+                                sock.sendto(header + fragment, client_list[i])
+
+                    if json_obj["type"] == "del":
+                        print(client_list[src_id], "leave")
+                        del client_list[src_id]
 
 except Exception as e:
+    print("err:")
     print(e)    
 finally:
     sock.close()
