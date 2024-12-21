@@ -184,7 +184,7 @@ host = "192.168.0.147"
 port = 5000
 
 local_host = "192.168.0.173"
-local_port = 5001
+local_port = 5002
 
 sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
 sock.bind((local_host, local_port))
